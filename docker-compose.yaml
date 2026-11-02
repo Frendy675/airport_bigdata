@@ -1,0 +1,82 @@
+services:
+  master:
+    image: chrislusf/seaweedfs:latest
+    container_name: airport-master
+    command: master -ip=master -ip.bind=0.0.0.0 -defaultReplication=002
+    ports:
+      - "9333:9333"
+      - "19333:19333"
+    volumes:
+      - master_data:/data
+    networks: [airport-net]
+
+  volume1:
+    image: chrislusf/seaweedfs:latest
+    container_name: airport-volume1
+    command: volume -mserver=master:9333 -ip=volume1 -ip.bind=0.0.0.0 -port=8080 -dir=/data -max=10 -dataCenter=dc1 -rack=rack1
+    ports:
+      - "8081:8080"
+    volumes:
+      - volume1_data:/data
+    depends_on: [master]
+    networks: [airport-net]
+
+  volume2:
+    image: chrislusf/seaweedfs:latest
+    container_name: airport-volume2
+    command: volume -mserver=master:9333 -ip=volume2 -ip.bind=0.0.0.0 -port=8080 -dir=/data -max=10 -dataCenter=dc1 -rack=rack1
+    ports:
+      - "8082:8080"
+    volumes:
+      - volume2_data:/data
+    depends_on: [master]
+    networks: [airport-net]
+
+  volume3:
+    image: chrislusf/seaweedfs:latest
+    container_name: airport-volume3
+    command: volume -mserver=master:9333 -ip=volume3 -ip.bind=0.0.0.0 -port=8080 -dir=/data -max=10 -dataCenter=dc1 -rack=rack1
+    ports:
+      - "8083:8080"
+    volumes:
+      - volume3_data:/data
+    depends_on: [master]
+    networks: [airport-net]
+
+  filer:
+    image: chrislusf/seaweedfs:latest
+    container_name: airport-filer
+    command: filer -master=master:9333 -ip=filer -ip.bind=0.0.0.0
+    ports:
+      - "8888:8888"
+    depends_on: [master, volume1, volume2, volume3]
+    networks: [airport-net]
+
+  s3:
+    image: chrislusf/seaweedfs:latest
+    container_name: airport-s3
+    command: s3 -filer=filer:8888 -ip.bind=0.0.0.0
+    ports:
+      - "8333:8333"
+    depends_on: [filer]
+    networks: [airport-net]
+
+  mongodb:
+    image: mongo:7
+    container_name: airport-mongodb
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks: [airport-net]
+
+volumes:
+  master_data:
+  volume1_data:
+  volume2_data:
+  volume3_data:
+  mongodb_data:
+
+networks:
+  airport-net:
+    driver: bridge
